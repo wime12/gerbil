@@ -40,10 +40,10 @@ package: std/os
            NOTE_FFNOP NOTE_FFAND NOTE_FFOR NOTE_FFCOPY
            NOTE_FFCTRLMASK NOTE_FFLAGSMASK))
   (darwin
-   (export EV_OOBAND EV_RECEIPT #;EVFILT_EXCEPT EVFILT_AIO EVFILT_MACHPORT
-           #;NOTE_OOB #;NOTE_FUNLOCK NOTE_EXITSTATUS
+   (export EV_OOBAND EV_RECEIPT EVFILT_EXCEPT EVFILT_AIO EVFILT_MACHPORT
+           NOTE_OOB NOTE_FUNLOCK NOTE_EXITSTATUS
            NOTE_SIGNAL NOTE_REAP NOTE_SECONDS NOTE_USECONDS
-           NOTE_NSECONDS #;NOTE_MACHTIME NOTE_ABSOLUTE NOTE_CRITICAL
+           NOTE_NSECONDS NOTE_MACHTIME NOTE_ABSOLUTE NOTE_CRITICAL
            NOTE_BACKGROUND NOTE_LEEWAY)))
 
 (def (kqueue)
@@ -165,10 +165,10 @@ package: std/os
      NOTE_FFNOP NOTE_FFAND NOTE_FFOR NOTE_FFCOPY
      NOTE_FFCTRLMASK NOTE_FFLAGSMASK))
   (darwin
-   (extern EV_OOBAND EV_RECEIPT #;EVFILT_EXCEPT EVFILT_AIO EVFILT_MACHPORT
-     #;NOTE_OOB #;NOTE_FUNLOCK NOTE_EXITSTATUS
+   (extern EV_OOBAND EV_RECEIPT EVFILT_EXCEPT EVFILT_AIO EVFILT_MACHPORT
+     NOTE_OOB NOTE_FUNLOCK NOTE_EXITSTATUS
      NOTE_SIGNAL NOTE_REAP NOTE_SECONDS NOTE_USECONDS
-     NOTE_NSECONDS #;NOTE_MACHTIME NOTE_ABSOLUTE NOTE_CRITICAL
+     NOTE_NSECONDS NOTE_MACHTIME NOTE_ABSOLUTE NOTE_CRITICAL
      NOTE_BACKGROUND NOTE_LEEWAY)))
 
 (cond-expand
@@ -229,14 +229,14 @@ package: std/os
               NOTE_TRACKERR NOTE_CHANGE EVFILT_AIO EVFILT_FS
 
               EVFILT_PROCDESC EVFILT_USER NOTE_CLOSE
-              NOTE_CLOSE_WRITE NOTE_OPEN NOTE_READ
+              NOTE_CLOSE_WRITE NOTE_OPEN NOTE_READ 
               NOTE_SECONDS NOTE_MSECONDS NOTE_USECONDS NOTE_NSECONDS
               NOTE_FFNOP NOTE_FFAND NOTE_FFOR NOTE_FFCOPY
               NOTE_FFCTRLMASK NOTE_FFLAGSMASK
 
-              EV_OOBAND #;EVFILT_EXCEPT EVFILT_MACHPORT NOTE_LOWAT
-              #;NOTE_OOB #;NOTE_FUNLOCK NOTE_EXITSTATUS NOTE_SIGNAL
-              NOTE_REAP #;NOTE_MACHTIME NOTE_ABSOLUTE NOTE_CRITICAL
+              EV_OOBAND EVFILT_EXCEPT EVFILT_MACHPORT NOTE_LOWAT
+              NOTE_OOB NOTE_FUNLOCK NOTE_EXITSTATUS NOTE_SIGNAL
+              NOTE_REAP NOTE_MACHTIME NOTE_ABSOLUTE NOTE_CRITICAL
               NOTE_BACKGROUND NOTE_LEEWAY
 
               kevent kevent* timespec timespec*
@@ -293,7 +293,7 @@ package: std/os
      (define-const EVFILT_PROCDESC)
      (define-const EVFILT_USER))
     (darwin
-     #;(define-const EVFILT_EXCEPT)
+     (define-const EVFILT_EXCEPT)
      (define-const EVFILT_AIO)
      (define-const EVFILT_MACHPORT)))
 
@@ -336,15 +336,15 @@ package: std/os
      (define-const NOTE_FFCTRLMASK)
      (define-const NOTE_FFLAGSMASK))
     (darwin
-     #;(define-const NOTE_OOB)
-     #;(define-const NOTE_FUNLOCK)
+     (define-const NOTE_OOB)
+     (define-const NOTE_FUNLOCK)
      (define-const NOTE_EXITSTATUS)
      (define-const NOTE_SIGNAL)
      (define-const NOTE_REAP)
      (define-const NOTE_SECONDS)
      (define-const NOTE_USECONDS)
      (define-const NOTE_NSECONDS)
-     #;(define-const NOTE_MACHTIME)
+     (define-const NOTE_MACHTIME)
      (define-const NOTE_ABSOLUTE)
      (define-const NOTE_CRITICAL)
      (define-const NOTE_BACKGROUND)
@@ -408,10 +408,17 @@ package: std/os
   (define-c-lambda kevent_data_set (kevent* int int64) void
     "___arg1[___arg2].data = ___arg3; ___return;")
 
-  (define-c-lambda kevent_udata (kevent* int) (pointer void)
-    "___return (___arg1[___arg2].udata);")
-  (define-c-lambda kevent_udata_set (kevent* int (pointer void)) void
-    "___arg1[___arg2].udata = ___arg3; ___return;")
+  (cond-expand
+    (netbsd
+     (define-c-lambda kevent_udata (kevent* int) int
+       "___return (___arg1[___arg2].udata);")
+     (define-c-lambda kevent_udata_set (kevent* int int) void
+       "___arg1[___arg2].udata = ___arg3; ___return;"))
+    (else
+     (define-c-lambda kevent_udata (kevent* int) int
+       "___return ((long)(___arg1[___arg2].udata));")
+     (define-c-lambda kevent_udata_set (kevent* int int) void
+       "___arg1[___arg2].udata = (void *)((long)___arg3); ___return;")))
 
   (define-c-lambda ev_set
     (kevent* int unsigned-int short unsigned-short unsigned-int int64 (pointer void)) void
